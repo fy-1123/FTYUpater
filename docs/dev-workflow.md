@@ -116,13 +116,18 @@ Get-CimInstance Win32_Process -Filter "Name='java.exe'" |
 
 服务端数据落在 `run/ftyupater/server/`（`journal.jsonl`、`generations/<gen>/manifest.json`、`objects/<sha>`），清库直接删该目录即可。
 
-## 10. 版本控制（建议，待用户同意）
+## 10. 版本控制
 
-当前目录没有 `.git`。建议在 M1 开工前 `git init`，先提交「v1 基线 + 文档」，之后每个里程碑一个提交：
+远程库：<https://github.com/fy-1123/FTYUpater>（public，默认分支 `main`）。
 
+```bat
+git add -A
+git commit -m "feat(server): ..."
+git push
 ```
-docs: v2 方案与文档骨架
-feat(core): 清单模型、哈希与比对引擎
-feat(server): 内容发布与 HTTP API
-...
-```
+
+提交信息沿用约定前缀（`docs:` / `feat(core):` / `feat(server):` / `feat(client):` / `fix(...)` / `test:`），一个里程碑至少一个提交。
+
+换行由 `.gitattributes` 统一：仓库内存 LF，Windows 检出为 CRLF；`gradlew` 强制 LF，`*.bat` 强制 CRLF，jar/图片按二进制处理。
+
+> 历史注记：`git init` 于 2026-11-07 执行，首个提交 `2feb4b7`（v2 基线，91 文件）。此前的 v1 没有版本历史。

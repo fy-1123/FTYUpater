@@ -17,7 +17,7 @@ FTYUpater 是一个 **Minecraft Forge 1.20.1** 的服务器模组包同步模组
 - **v1 已不存在**：19 个 v1 类移入项目根 `.trash-v1-20261106/`（可恢复），主菜单不再有 FTYUpater 入口。不要再按旧文档去找 `SyncManager` / `SyncScreen` / `PreJoinGuard` 等类（ADR-018）。
 - 技术栈：Java 17 字节码、Forge 47.x、Gradle 8.8（wrapper）、Mixin、JDK 自带 HttpServer
 - 许可证：MIT
-- 工作目录：`C:\CodeSpace\Java\FTYUpater`
+- 工作目录：`C:\CodeSpace\Java\FTYUpater`（git 仓库，远程 <https://github.com/fy-1123/FTYUpater>，分支 `main`）
 
 ## 2. 开工前必读（顺序）
 

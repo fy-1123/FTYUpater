@@ -23,7 +23,7 @@
 
 ## 2. 项目背景
 
-- 目录：`C:\CodeSpace\Java\FTYUpater`，当前不是 git 仓库（没有 `.git`）。
+- 目录：`C:\CodeSpace\Java\FTYUpater`，git 仓库，远程 <https://github.com/fy-1123/FTYUpater>（public，`main`）。
 - Forge 1.20.1 模组：`mod_id=ftyupater`，版本 `2.0.0`，包名 `com.ftysync`，许可证 MIT。
 - 构建：Gradle 8.8 wrapper，ForgeGradle `[6.0.16,6.2)`，mappings official 1.20.1，MixinGradle `0.7.38`。
 - 编译：本机 JAVA_HOME 是 JDK 21.0.12，但 `options.release = 17`。
@@ -173,7 +173,7 @@ M4 关键修复：dev 下 mixin 原本完全不加载，补了 MixinGradle + ref
 - **所有 gradle 调用走 `mc_gradle` 工具**（ADR-021）：bash 跑 `.bat` 会挂起，pwsh 直跑会把输出缓冲到进程结束。
 - **用户明确要求不上真机测试**（2026-11-07）：不跑 `runClient` / `runServer` 做 GUI 验收；界面外观目前是「逻辑已验证、外观未验证」。
 - **不要用 PowerShell `Get-Content|Set-Content` 回写源码/文档**（BOM 与 ANSI 都会坏事）。
-- 当前没有 git 历史；建议 `git init` 并先提交当前基线（待用户同意）。
+- 版本控制：git 已建，远程 <https://github.com/fy-1123/FTYUpater>（public，`main`）；基线提交 `2feb4b7`（v2 基线，91 文件），`b0ba18e` 补 `.gitattributes` 统一换行。
 
 ---
 
