@@ -1,0 +1,18 @@
+# 统一换行：仓库内存 LF，检出时 Windows 用 CRLF
+* text=auto eol=lf
+
+# 脚本必须保留 LF，否则在 bash/CI 里跑不起来
+*.sh   text eol=lf
+gradlew text eol=lf
+
+# 批处理必须 CRLF
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# 二进制，不做换行转换
+*.jar  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.zip  binary
