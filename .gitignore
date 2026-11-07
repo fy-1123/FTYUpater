@@ -1,0 +1,28 @@
+# Gradle
+.gradle/
+build/
+.gradle-local/
+.gradle-*/
+out/
+run/
+
+# IDE
+.classpath
+.project
+.settings/
+bin/
+.idea/
+*.iml
+eclipse/
+.vscode/
+
+# MC
+logs/
+*.log
+
+# 本地回收站（v1 源码备份，232K；如需入库请删掉这一行）
+.trash-v1-*/
+
+# OS
+Thumbs.db
+.DS_Store

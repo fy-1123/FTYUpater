@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "minVersion": "0.8.5",
+  "package": "com.ftysync.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "ftyupater.refmap.json",
+  "client": [
+    "ConnectScreenMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

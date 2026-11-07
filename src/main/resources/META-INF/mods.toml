@@ -1,0 +1,22 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="ftyupater"
+version="1.0.0"
+displayName="FTYUpater"
+authors="fty"
+description='''Simple Modpack Sync - a dedicated sync folder served over HTTP with hash verification and full mirror client sync.'''
+[[dependencies.ftyupater]]
+    modId="forge"
+    mandatory=true
+    versionRange="[47,)"
+    ordering="NONE"
+    side="BOTH"
+[[dependencies.ftyupater]]
+    modId="minecraft"
+    mandatory=true
+    versionRange="[1.20.1,1.21)"
+    ordering="NONE"
+    side="BOTH"
