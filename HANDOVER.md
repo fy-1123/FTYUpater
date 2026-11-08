@@ -1,6 +1,6 @@
 # HANDOVER.md — 交接快照
 
-> 更新时间：2026-11-07（v1 链路整条删除；界面布局抽成 `CheckLayout` 并由 `CheckLayoutTest` 覆盖不重叠；测试数与 jar 已按 XML 报告和实际产物核对）
+> 更新时间：2026-11-08（M5 + M6 完成：版本回退 / ApplyHelper / 回收站还原 / v1 迁移 / E2E 清单；测试 251 项、jar 236,915 字节）
 > 更新人：AI 协作者
 > 读者：下一位接手本项目的人 / AI。开工前请先读 `agent.md` 第 2 节。
 
@@ -8,15 +8,15 @@
 
 ## 1. 一句话现状
 
-**M1–M4 已实现并验证；2026-11-06 完成两项用户直接提出的改动：(a) 整条 v1 链路删除（含主菜单「FTYUpater 同步」按钮），(b) 进服检查界面按原版控件重写、布局全部按窗口现算。下一步 M5（版本回退 + ApplyHelper）。**
+**M1–M6 全部实现完毕；M5（版本回退 + ApplyHelper）与 M6（回收站还原 + v1 迁移 + E2E 清单）于 2026-11-08 完成。所有逻辑都有纯 JVM 单测覆盖；所有需要鼠标点击的界面流程仍「未在真机验证」（用户 2026-11-07 明确要求不上真机），清单在 `docs/testing.md`。**
 
-- 测试：`.\gradlew.bat test --offline` → **148 个测试方法 / 147 PASSED / 0 FAILED / 1 SKIPPED**（skip 的是 `LiveSyncIT`，需要 dev 服务器在跑）。数字以 `build/test-results/test/*.xml` 求和为准（2026-11-07 实测：23 个 XML，`tests 148, failures 0, skipped 1`）。
-- 编译：`compileJava --offline` → SUCCESS（40s，仅 3 条 `ModLoadingContext.get()` removal 警告）。
-- 打包：`build --offline` → SUCCESS（59s，`addMixinsToJar` + `jar` + `reobfJar` 均执行），产物 **`build/libs/FTYUpater-2.0.0.jar`**（147,746 字节，含 `ftyupater.mixins.json` + `ftyupater.refmap.json` + `CheckLayout.class` + 重写后的 `JoinCheckScreen`）。v1 旧 jar 已移入 `.trash-v1-20261106/`。
+- 测试：`.\gradlew.bat test --offline` → **251 个测试方法 / 250 PASSED / 0 FAILED / 1 SKIPPED**（skip 的是 `LiveSyncIT`，需要 dev 服务器在跑）。数字以 `build/test-results/test/*.xml` 求和为准（2026-11-08 实测：31 个 XML，`tests 251, failures 0, skipped 1`）。
+- 编译：`compileJava --offline` → SUCCESS（2m42s，仅 3 条 `ModLoadingContext.get()` removal 警告）。
+- 打包：`build --offline` → SUCCESS（1m58s，`addMixinsToJar` + `jar` + `reobfJar` 均执行），产物 **`build/libs/FTYUpater-2.0.0.jar`**（236,915 字节，含 `ftyupater.mixins.json` + `ftyupater.refmap.json` + `helper/*` + `RollbackScreen` + `TrashScreen` + 全部 M5/M6 新类）。v1 旧 jar 已移入 `.trash-v1-20261106/`。
 - **主菜单按钮已移除**：`client/ClientEvents.java`（唯一出处）已删除，`ModConfig.CLIENT.autoCheckOnMainMenu` 一并删除。启动游戏不再发任何同步网络请求，同步只发生在进服时。
 - **界面已重写**：`client/gui/JoinCheckScreen.java` 改用原版 `ObjectSelectionList`，全部纵向坐标由 `client/gui/CheckLayout.java` 现算（按钮贴底、列表吃中间），`CheckLayoutTest` 在 160~3840 宽 × 40~2160 高逐像素断言「文字/列表/按钮三者不重叠」；可选模组行自带「我不要 / 恢复」按钮。
-- **GUI 点击验收仍未完成**：布局的「不重叠」已由 `CheckLayoutTest` 在数学层面保证，但「进服 → 点一键同步 → 重启 → 进服」这条完整点击流程还没人跑过。用户 2026-11-07 明确要求不上真机测试，因此这一项保持「未验证」，不谎报。
-- **已知缺口**：`pending/pending.json`（Windows 文件锁导致延后应用）在 M5 的 `ApplyHelper` 完成前不会被自动应用。
+- **GUI 点击验收仍未完成**：布局的「不重叠」已由 `CheckLayoutTest` 在数学层面保证，但「进服 → 点一键同步 → 重启 → 进服」这条完整点击流程还没人跑过。用户 2026-11-07 明确要求不上真机测试，因此这一项保持「未验证」，不谎报。全部 14 节手工验收项见 `docs/testing.md`（每项都是未勾选状态）。
+- **已知缺口**：无功能性缺口。剩下的全是「需要真机点一遍」的验证项。
 - 历史事故：2026-10-21 两次文档被 PowerShell 回写破坏/覆盖（UTF-8 损坏与 M4 状态误报），均已按 DSH 会话记录原文恢复/更正；纪律见 ADR-013、ADR-017。
 
 ---
@@ -48,21 +48,27 @@ src/main/java/com/ftysync/
     ScannedFile, ContentScanner, ContentStore, GenerationJournal,
     GenerationStore, PackPublisher, SyncPackRepository,
     FilePackRepository, HttpSyncServer
-  client/（M3 引擎 + M4 接线）
+  client/（M3 引擎 + M4 接线 + M5 回退 + M6 迁移）
     SyncPaths, ServerSourceCache, PendingOp, PendingQueue,
     BackupManager, LockProbe, ApplyService, SyncEngine,
     Advert, AdvertParser, LocalScanner, JoinDecision,
     StatusPinger, JoinProbe, PackClient, SyncAdvert, JoinBypass,
-    gui/JoinCheckScreen, gui/CheckLayout
+    HelperLauncher, PendingNotice, ClientStartup,
+    ServerGeneration, RollbackPlanner, RollbackService, RollbackDetect,
+    TrashBrowser, V1Migration,
+    gui/JoinCheckScreen, gui/CheckLayout, gui/RollbackScreen, gui/TrashScreen
+  helper/（M5，独立 JVM，只用 JDK）
+    ApplyHelper, PendingApplier, HelperResult, MiniJson
   mixin/ConnectScreenMixin
   ServerSyncRuntime.java（Forge 接线：启动/停止发布器 + 设置广告）
-  FTYUpater.java（启动 v2 运行时 + registerDisplayTest 广告）
+  FTYUpater.java（启动 v2 运行时 + registerDisplayTest 广告 + DistExecutor 挂客户端启动检查）
   ModConfig.java（Server 11 键 + Client 4 键，v1 孤儿键已删）
 src/test/java/com/ftysync/
   core/（6 个测试类）
   server/（5 个测试类）
-  client/（11 个测试类，含 LiveSyncIT、SyncScenarioTest、TestSyncServer）
+  client/（16 个测试类，含 LiveSyncIT、SyncScenarioTest、TestSyncServer）
   client/gui/（1 个测试类：CheckLayoutTest）
+  helper/（2 个测试类：MiniJsonTest、PendingApplierTest）
 ```
 
 **2026-11-06 删除的 v1 类全部在 `.trash-v1-20261106/src/...` 下（19 个文件，可恢复）**：
@@ -141,35 +147,37 @@ M4 关键修复：dev 下 mixin 原本完全不加载，补了 MixinGradle + ref
 
 ## 4. 已知问题 / 遗留
 
-1. **GUI 点击流程未验证**：布局不重叠由 `CheckLayoutTest` 数学保证，但「进服 → 点一键同步 → 重启 → 进服」完整点击流程需人工跑一次（用户要求不上真机，所以不由 AI 声称已验证）。
+1. **所有 GUI 点击流程未验证**：布局不重叠由 `CheckLayoutTest` 数学保证，但「进服 → 点一键同步 → 重启 → 进服」「版本回退」「回收站还原」这三条点击流程都需人工跑一次（用户要求不上真机，所以不由 AI 声称已验证）。完整清单见 `docs/testing.md`，14 节全部未勾选。
 2. 服务端 HTTP 无鉴权（ADR 决定）；公网部署前需在 README 说明风险/建议前置反向代理。
-3. 服务端发布期间扫描是同步阻塞在发布线程里的（大整合包首次扫描可能慢）；M6 可做 mtime/size 缓存优化。
-4. **M4 → M5 之间 pending 不会自动应用**：被锁定的替换/删除只写进 `pending/pending.json`，要等 M5 的 `ApplyHelper`。UI 已提示「重启后生效」。
-5. `LiveSyncIT` 依赖 dev 服务器（默认 `http://127.0.0.1:8081`，可用环境变量 `FTYUPATER_LIVE_URL` 覆盖）；服务器没跑时自动 skip。
-6. 客户端 dev 首次运行要等 ForgeGradle 起服约 2.5~4 分钟；`runClient` 与 `runServer` 共用 `run/` 日志目录，日志里会混有另一进程输出。
+3. 服务端发布期间扫描是同步阻塞在发布线程里的（大整合包首次扫描可能慢）；可做 mtime/size 缓存优化。
+4. `LiveSyncIT` 依赖 dev 服务器（默认 `http://127.0.0.1:8081`，可用环境变量 `FTYUPATER_LIVE_URL` 覆盖）；服务器没跑时自动 skip。
+5. 客户端 dev 首次运行要等 ForgeGradle 起服约 2.5~4 分钟；`runClient` 与 `runServer` 共用 `run/` 日志目录，日志里会混有另一进程输出。
+6. `RollbackService` 走本地备份时**只能还原被覆盖过的文件**，那代之后新增而备份里没有的文件无法删除，所以报告会标「可能不完整」——这是设计上的兜底路径，首选永远是服务器代际清单。
 
 ---
 
-## 5. 下一步（M5 版本管理与回退 + ApplyHelper，见 `docs/plan.md`）
+## 5. 下一步（M7 候选，尚未排期）
 
-- `helper/ApplyHelper`：独立 JVM（只用 JDK，不用 Gson），等父进程退出后应用 `pending/pending.json`，结果写回；由客户端退出钩子启动。
-- 客户端启动时检测 pending / helper 结果，提示玩家「上次的更新已/未生效」。
-- 回退 UI：选择上一代（本地 `backup/<generation>/` 优先，否则服务器 `/api/v1/generations` + `/pack?generation=`）→ 同步。
-- 服务器回退检测：清单 generation 比本地旧 → 提示并跟随。
-- 自动跟新：启动/主菜单/进服前检查（可用已有 `SyncEngine`）。
-- 验收：更新一代 → 回退上一代 → 再更新；Windows 锁定 jar 场景 helper 生效；helper 失败（杀进程/只读）下次启动有提示。
+M5/M6 的功能任务已全部完成。若要继续，候选方向：
+
+- **把 `docs/testing.md` 的 14 节手工清单真机跑一遍**，把结果回填（这是当前唯一能提升置信度的事）。
+- 服务端扫描加 mtime/size 缓存（已知问题 3），大整合包首次扫描不再阻塞发布线程。
+- 服务端 HTTP 鉴权或反向代理示例（已知问题 2）。
+- 服务器列表里显示「需同步 / 已一致」（`docs/plan.md` M6 里被标为可选、成本高则延后的一项）。
 
 ---
 
 ## 6. 如何验证 / 如何继续
 
-- 读文档：`agent.md` → `HANDOVER.md` → `docs/status-matrix.md` → `docs/plan.md`。
-- 只验证逻辑：`.\gradlew.bat test --offline`（约 40 秒；当前 **148 个方法 / 147 过 / 1 skip**；skip 的是 `LiveSyncIT`，因为要 dev 服务器在跑）。
+- 读文档：`agent.md` → `HANDOVER.md` → `docs/status-matrix.md` → `docs/plan.md` → `docs/testing.md`。
+- 只验证逻辑：`.\gradlew.bat test --offline`（约 5 分半；当前 **251 个方法 / 250 过 / 1 skip**；skip 的是 `LiveSyncIT`，因为要 dev 服务器在跑）。
 - 只改界面布局：`.\gradlew.bat test --offline --tests "com.ftysync.client.gui.CheckLayoutTest"`（5 项，纯整数运算，不依赖 Minecraft）。
+- 只改 helper：`.\gradlew.bat test --offline --tests "com.ftysync.helper.*"`（36 项）。
+- 只改回退 / 回收站 / 迁移：`.\gradlew.bat test --offline --tests "com.ftysync.client.Rollback*" --tests "com.ftysync.client.TrashBrowserTest" --tests "com.ftysync.client.V1MigrationTest"`（56 项）。
 - 只改客户端代码：`.\gradlew.bat test --offline --tests "com.ftysync.client.*"`。
 - 各种同步场景：`.\gradlew.bat test --offline --tests "com.ftysync.client.SyncScenarioTest"`（13 项，纯 JVM：进程内 `HttpSyncServer` + 临时游戏目录，不启动游戏）。覆盖表见 `docs/status-matrix.md` §G。
-- 编译检查：`.\gradlew.bat compileJava --offline`（约 40 秒）。
-- 打包：`.\gradlew.bat build --offline`（增量约 59 秒；2026-11-07 实测产物 147,746 字节）。
+- 编译检查：`.\gradlew.bat compileJava --offline`（40 秒~2 分 40 秒，取决于是否触发 APT 与 downloadMcpConfig）。
+- 打包：`.\gradlew.bat build --offline`（约 2 分钟；2026-11-08 实测产物 236,915 字节）。
 - **所有 gradle 调用走 `mc_gradle` 工具**（ADR-021）：bash 跑 `.bat` 会挂起，pwsh 直跑会把输出缓冲到进程结束。
 - **用户明确要求不上真机测试**（2026-11-07）：不跑 `runClient` / `runServer` 做 GUI 验收；界面外观目前是「逻辑已验证、外观未验证」。
 - **不要用 PowerShell `Get-Content|Set-Content` 回写源码/文档**（BOM 与 ANSI 都会坏事）。
@@ -185,9 +193,9 @@ M4 关键修复：dev 下 mixin 原本完全不加载，补了 MixinGradle + ref
 | M1 core 纯逻辑库 | ✅ | core 6 个测试类全绿 |
 | M2 服务端发布 | ✅ | server 5 个测试类全绿 |
 | M3 客户端同步引擎 | ✅ | client 引擎测试全绿 |
-| M4 进服前检查 + 一键同步 | ✅ 逻辑 / ⚠️ 外观 | 148 个测试方法（147 过 1 skip）；v1 已删、主菜单入口已移除、界面按原版控件重写 + `CheckLayout` 布局可单测；同步场景 13 项端到端覆盖；**点击流程未在真机确认**（用户要求不上真机） |
-| M5 版本回退 + ApplyHelper | 🚧 下一步 | — |
-| M6 打磨/迁移/打包 | 📋 | — |
+| M4 进服前检查 + 一键同步 | ✅ 逻辑 / ⚠️ 外观 | 界面按原版控件重写 + `CheckLayout` 布局可单测；同步场景 13 项端到端覆盖；**点击流程未在真机确认**（用户要求不上真机） |
+| M5 版本回退 + ApplyHelper | ✅ 逻辑 / ⚠️ 点击流程 | 新增 `helper/`（4 类，独立 JVM）+ `RollbackPlanner/Service/Detect` + `gui/RollbackScreen` + `PendingNotice`/`ClientStartup`/`HelperLauncher`/`ServerGeneration`；`LocalState.previousGeneration` + `advanceGeneration`；单测 63 项（含 helper 36） |
+| M6 打磨/迁移/打包 | ✅ 逻辑 / ⚠️ 点击流程 | `TrashBrowser` + `gui/TrashScreen` + `V1Migration` + `docs/testing.md`（14 节手工清单）；单测 23 项；全量 **251 方法 / 250 过 / 1 skip / 31 XML**；jar **236,915 字节** |
 
 ---
 

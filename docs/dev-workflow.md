@@ -21,7 +21,7 @@
 
 - **所有 gradle 调用走 `mc_gradle` 工具**（ADR-021）：bash 跑 `.bat` 会挂起；pwsh 直跑会把输出缓冲到进程结束，看不到进度。
 - 每次跑完 gradle：**立刻更新 `docs/status-matrix.md` B 节**（时间、耗时、结果）。
-- 测试数量以 `build/test-results/test/*.xml` 求和为准（当前 148 个方法 / 147 过 / 1 skip），不要凭控制台摘要估。
+- 测试数量以 `build/test-results/test/*.xml` 求和为准（当前 251 个方法 / 250 过 / 1 skip / 31 个 XML），不要凭控制台摘要估。
 - 一次会话里同一个任务已经通过且代码没变，不要重复跑。
 
 ## 3. 编码约定

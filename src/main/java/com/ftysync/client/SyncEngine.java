@@ -158,7 +158,7 @@ public final class SyncEngine {
         for (String path : appliedResult.deleted()) {
             state.removeInstalled(path);
         }
-        state.setGeneration(generation);
+        state.advanceGeneration(generation);
         state.setLastSync(Instant.now().toString());
         try {
             stateStore.save(state);

@@ -218,7 +218,7 @@
 ## ADR-023 测试数量以 XML 报告求和为准
 
 - 状态：已采纳（2026-11-07）
-- 背景：本次曾把 Gradle 控制台摘要误读成「119 PASSED / 120 个方法」，进而在 `HANDOVER.md`、`agent.md`、`status-matrix.md` 里写下错误数字；后来对 `build/test-results/test/*.xml` 求和，实际是 130 个方法（加 `SyncScenarioTest` 的 13 个后为 143）。原文档里写的「130 tests」其实是对的。2026-11-07 又新增 `CheckLayoutTest` 5 项，当前为 **148 个方法 / 147 通过 / 1 skip / 23 个 XML**。
+- 背景：本次曾把 Gradle 控制台摘要误读成「119 PASSED / 120 个方法」，进而在 `HANDOVER.md`、`agent.md`、`status-matrix.md` 里写下错误数字；后来对 `build/test-results/test/*.xml` 求和，实际是 130 个方法（加 `SyncScenarioTest` 的 13 个后为 143）。原文档里写的「130 tests」其实是对的。2026-11-07 新增 `CheckLayoutTest` 5 项后为 148；2026-11-08 M5/M6 再新增 103 项（helper 36 / 回退 33 / 回收站 13 / 迁移 10 / 启动提示 11），当前为 **251 个方法 / 250 通过 / 1 skip / 31 个 XML**。
 - 决策：任何「当前有多少测试」的数字，一律用 `build/test-results/test/*.xml` 里 `tests` / `failures` / `skipped` 属性求和得出；不凭控制台摘要、不凭记忆。
 - 理由：Gradle 的测试输出会因过滤（`--tests`）和 UP-TO-DATE 跳过而只显示子集，控制台摘要极易误读；XML 是这次运行的真实记录。
 - 后果：状态表 B 表已注明「数字以 `build/test-results/test/*.xml` 求和为准，别看控制台摘要」。

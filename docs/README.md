@@ -14,6 +14,7 @@
 | [status-matrix.md](status-matrix.md) | 功能状态表 + gradle 任务表 + 构建产物状态 | **每次跑完 gradle / 每完成一个功能后** |
 | [decisions.md](decisions.md) | 决策记录 ADR | 做出/推翻/修订决策时 |
 | [dev-workflow.md](dev-workflow.md) | 日常开发流程、构建策略、禁止事项 | 流程变化时 |
+| [testing.md](testing.md) | E2E 手工验收清单（必须开游戏 / 双进程的部分） | 跑完一项就勾选并记录日期 |
 
 ## 更新规则
 

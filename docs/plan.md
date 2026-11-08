@@ -121,34 +121,34 @@
 > 实测中发现并修复的真实缺陷：**清单里多个路径内容相同（同一 sha256）时，暂存文件被第一个目标 move 走导致后续全部失败** → 改为复制到临时文件再原子改名（ADR-015）。
 > 已知缺口：①`pending`（Windows 文件锁）要等 M5 的 ApplyHelper 才会被应用；②语言文件与服务器列表状态延后 M6；③GUI 全流程需人工点击验证一次。
 
-### M5 版本管理与回退 + ApplyHelper（下一步）
+### M5 版本管理与回退 + ApplyHelper（已完成 2026-11-08）
 
 任务：
 
-- [ ] `helper/ApplyHelper`：独立 JVM，等父进程退出后应用 pending（只用 JDK）
-- [ ] 客户端启动时检测 pending / helper 结果，提示玩家
-- [ ] 回退 UI：选择上一代（本地 backup 优先，否则服务器历史清单）→ 同步
-- [ ] 服务器回退检测：清单 generation 比本地旧 → 提示并跟随
-- [ ] 自动跟新：启动/主菜单/进服前检查
+- [x] `helper/ApplyHelper`：独立 JVM，等父进程退出后应用 pending（只用 JDK）——`helper/{ApplyHelper,PendingApplier,HelperResult,MiniJson}`，`ProcessHandle` 轮询父进程退出（500ms，上限 10 分钟），自带极简 JSON 解析器（不能假设 Gson 在）
+- [x] 客户端启动时检测 pending / helper 结果，提示玩家——`ClientStartup` 首个 `ClientTickEvent` 检查一次，`PendingNotice.compose` 决定文案，`SystemToast`（`PERIODIC_NOTIFICATION` 令牌）弹一次，读完 `consume` 避免重复打扰
+- [x] 回退 UI：选择上一代（本地 backup 优先，否则服务器历史清单）→ 同步——`gui/RollbackScreen` + `RollbackPlanner`（合并两个来源，`previousGeneration` 排第一）+ `RollbackService`（服务器代际清单重新同步 = 准；本地备份还原 = 离线兜底且标「可能不完整」）
+- [x] 服务器回退检测：清单 generation 比本地旧 → 提示并跟随——`RollbackDetect`（`parentGeneration` 指向本地 = 服务器更新；等于 `previousGeneration` = 服务器回退；否则按代际 id 字典序），`JoinCheckScreen` 在状态行明说
+- [x] 自动跟新：启动/主菜单/进服前检查——进服前检查已覆盖；主菜单入口按 ADR-018 已移除
 
-验收：
+验收（逻辑层全部通过，真机部分待跑）：
 
-- 更新一代 → 回退上一代 → 再更新，文件状态完全正确；
-- Windows：替换已加载 jar → 退出游戏 → helper 应用成功 → 再启动为正确版本；
-- helper 失败模拟（杀掉进程/目录只读）→ 下次启动有提示且可重试。
+- [x] 更新一代 → 回退上一代 → 再更新，文件状态完全正确（`RollbackPlannerTest` 13 + `RollbackServiceTest` 9 + `RollbackDetectTest` 11 覆盖判定与还原；`rewindsStateGenerationAndRemembersWhereWeWere` 验证可反悔）
+- [ ] Windows：替换已加载 jar → 退出游戏 → helper 应用成功 → 再启动为正确版本（逻辑由 `PendingApplierTest` 19 项覆盖，**真进程等待与真锁未验证** → `docs/testing.md` 第 7 项）
+- [ ] helper 失败模拟（杀掉进程/目录只读）→ 下次启动有提示且可重试（逻辑由 `PendingNoticeTest` 11 项 + `PendingApplierTest.lockedTargetStaysPending` 覆盖，**真机未验证** → `docs/testing.md` 第 8 项）
 
-### M6 打磨与交付
+### M6 打磨与交付（已完成 2026-11-08）
 
 任务：
 
-- [ ] 多人服务器列表里显示「需同步/已一致」状态（可选，若成本高则延后）
-- [ ] 回收站恢复 UI（列表 + 还原）
-- [ ] v1 配置/状态迁移（ignore、pending-deletions、last-server 读入新 state）
-- [ ] E2E 手工清单写成 `docs/testing.md`
-- [ ] README / HANDOVER / 状态表最终更新
-- [ ] release 构建 `gradlew build --offline`，产物说明
+- [ ] 多人服务器列表里显示「需同步/已一致」状态（可选，若成本高则延后）——**明确移出**：需要 Mixin 进 `MultiplayerScreen` 的服务器列表渲染，成本高且收益低；进服前检查已经把该说的话说清楚了
+- [x] 回收站恢复 UI（列表 + 还原）——`TrashBrowser`（列表 / 递归列文件 / 非破坏性还原 / `pruneEmpty`）+ `gui/TrashScreen`（入口在回退界面的【回收站】按钮）；还原用 `move` 而非 `copy`，文件离开后目录才会变空
+- [x] v1 配置/状态迁移（ignore、pending-deletions、last-server 读入新 state）——`V1Migration` 读三个文本文件，读完改名 `*.migrated` 留证；`ClientStartup.migrateFromV1` 首次 tick 合并进 `state.json`/`pending.json`/`servers.json`
+- [x] E2E 手工清单写成 `docs/testing.md`——14 节，全部未勾选并如实标注「未执行」
+- [x] README / HANDOVER / 状态表最终更新
+- [x] release 构建 `gradlew build --offline`，产物说明——2026-11-08 19:07 SUCCESS（1m58s），jar **236,915 字节**
 
-验收：E2E 清单全过；文档与实现一致；无 TODO 级已知缺陷（剩余项写入 HANDOVER）。
+验收：E2E 清单已写成文档但**尚未执行**（用户要求不上真机）；文档与实现一致；无 TODO 级已知缺陷（剩余项写入 HANDOVER §4）。
 
 ## 3. 完成定义（DoD）
 

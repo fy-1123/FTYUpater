@@ -17,6 +17,7 @@ public final class LocalState {
 
     private int schema = SCHEMA;
     private String generation;
+    private String previousGeneration;
     private String lastSync;
     private Set<String> optOut = new LinkedHashSet<>();
     private Set<String> ignored = new LinkedHashSet<>();
@@ -32,6 +33,36 @@ public final class LocalState {
 
     public void setGeneration(String generation) {
         this.generation = generation;
+    }
+
+    /**
+     * 上一次同步的代际（M5 回退用）。
+     *
+     * <p>每次 {@link #setGeneration(String)} 之前由同步引擎先把旧值挪到这里，
+     * 于是「回退」= 退回到 {@code previousGeneration}。</p>
+     */
+    public String previousGeneration() {
+        return previousGeneration;
+    }
+
+    public void setPreviousGeneration(String previousGeneration) {
+        this.previousGeneration = previousGeneration;
+    }
+
+    /**
+     * 推进代际：旧代际自动变成「上一代」。
+     *
+     * <p>这是唯一应该用来改代际的方法——直接调 {@code setGeneration} 会丢掉上一代，
+     * 回退就无从下手了。</p>
+     *
+     * @param newGeneration 新代际；与当前相同则什么都不做
+     */
+    public void advanceGeneration(String newGeneration) {
+        if (newGeneration == null || newGeneration.equals(this.generation)) {
+            return;
+        }
+        this.previousGeneration = this.generation;
+        this.generation = newGeneration;
     }
 
     public String lastSync() {

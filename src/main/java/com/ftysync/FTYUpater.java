@@ -25,6 +25,13 @@ public class FTYUpater {
         ModLoadingContext.get().registerDisplayTest(() -> com.ftysync.client.SyncAdvert.marker(),
                 (remoteVersion, isServer) -> true);
         MinecraftForge.EVENT_BUS.register(this);
+        // 客户端侧：启动时提示 pending / helper 结果。
+        // 必须用 DistExecutor 包一层：ClientStartup 引用了 Minecraft 类，
+        // 专用服务端直接调会 NoClassDefFoundError。runWhenOn 在服务端根本不会执行
+        // 那个 Supplier，所以 ClientStartup 不会被加载。
+        net.minecraftforge.fml.DistExecutor.runWhenOn(
+                net.minecraftforge.api.distmarker.Dist.CLIENT,
+                () -> com.ftysync.client.ClientStartup::init);
     }
 
     @SubscribeEvent

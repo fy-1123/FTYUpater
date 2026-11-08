@@ -39,29 +39,32 @@ v1 的 11 项功能（`/manifest` 平铺清单、`SyncManager` 文件名启发�
 | V2-05 | 客户端：下载/校验/暂存/应用/备份/回收站 | ✅ | M3（25 单测）+ M4 `LiveSyncIT` 对真实 dev 服务器跑通真实下载/应用/备份/回收站/state/log |
 | V2-06 | 客户端：进服前探测 + 中文检查界面 + 一键同步 | ✅ 逻辑 / ⚠️ 外观 | **2026-11-06 重写**：界面改为原版 `ObjectSelectionList` + 全按窗口现算的布局（`MARGIN=8`/`BUTTON_H=20`/`ROW_H=24`，按钮贴底、列表吃中间剩余空间），任何窗口尺寸不重叠；差异列表按 必需安装/更新/手工禁用/待重启/多余清理/可选安装/已选择不要 排序并标色；点击路径行为原版控件。**主菜单入口已移除**，同步只在进服时发生。链路逻辑已由 `SyncScenarioTest` 13 项端到端覆盖；**界面在真机上的观感未确认**（用户要求不上真机测试） |
 | V2-07 | 客户端：可选模组 opt-out（不计入差异） | ✅ | 比对/引擎层早支持（M1+M3 测试）；**2026-11-06 补上玩家 UI**：可选行右侧自绘 56×14 小按钮「我不要 / 恢复」，点击写 `state.json` 的 optOut 并立即重算差异刷新列表；required 行不显示该按钮（DiffEngine 对 required 无视 opt-out） |
-| V2-08 | 版本管理：自动跟新 + 回退上一代 | 🚧 | 服务端历史/旧代回退已在 M2 验证；客户端侧 M5 |
-| V2-09 | ApplyHelper：退出后应用锁定文件变更 | 📋 | M5 |
-| V2-10 | 回收站恢复 UI | 📋 | M6 |
-| V2-11 | v1 配置/状态迁移 | 📋 | M6 |
-| V2-12 | 单元测试套件（`core`/`server`/`client`/`client.gui` 纯 JVM） | ✅ | 持续维护；当前 **148 个测试方法**（147 通过 + 1 skip），23 个 XML，见 §G 同步场景覆盖表；界面布局由 `CheckLayoutTest` 5 项在数学层面保证不重叠 |
+| V2-08 | 版本管理：自动跟新 + 回退上一代 | ✅ 逻辑 / ⚠️ 点击流程 | **M5（2026-11-08）**：`LocalState.previousGeneration` + `advanceGeneration` 记住上一代；`RollbackPlanner` 合并本地备份与服务器历史（「刚退下来的」排第一）；`RollbackService` 两条路径（服务器代际清单重新同步 = 准，本地备份还原 = 离线兜底且标「可能不完整」）；`RollbackDetect` 检测服务器回退并在检查界面明说。单测 33 项（Planner 13 / Service 9 / Detect 11）。UI 见 V2-08b |
+| V2-08b | 回退界面（`gui/RollbackScreen`） | ✅ 逻辑 / ⚠️ 点击流程 | 列表复用 `CheckLayout` 与 `ObjectSelectionList`；每行标来源（本地/服务器/两者）与文件数；按钮文案在只有本地备份时带「（本地备份）」。入口：进服前检查界面【版本回退】。**真机点击未验证**（用户要求不上真机） |
+| V2-09 | ApplyHelper：退出后应用锁定文件变更 | ✅ 逻辑 | **M5（2026-11-08）**：`helper/ApplyHelper` 独立 JVM（`java -cp <jar> com.ftysync.helper.ApplyHelper <gameDir> <pid>`），`ProcessHandle` 轮询父进程退出（500ms，上限 10 分钟）后应用 pending；`MiniJson` 自带极简解析器（helper 不能假设 Gson 在）；结果写 `pending/helper-result.jsonl`，客户端 `ClientStartup` 下次启动弹 Toast 并收走。单测 36 项（MiniJson 17 / PendingApplier 19） |
+| V2-10 | 回收站恢复 UI | ✅ 逻辑 / ⚠️ 点击流程 | **M6（2026-11-08）**：`TrashBrowser` 列时间戳目录 / 递归列文件 / 非破坏性还原（目标已存在则跳过，绝不覆盖）/ `pruneEmpty` 清空目录；`gui/TrashScreen` 界面，入口在回退界面的【回收站】按钮。还原用 `move` 而非 `copy`，文件离开回收站后目录才会变空。单测 13 项 |
+| V2-11 | v1 配置/状态迁移 | ✅ 逻辑 | **M6（2026-11-08）**：`V1Migration` 读 `config/ftyupater-ignore.txt`（忽略列表）、`ftyupater-pending-deletions.txt`（待删）、`ftyupater-last-server.txt`（`host=url` 服务器记忆）；读完改名为 `*.migrated` 留证（不删）；按 `mods/` 真实大小写匹配；拒绝路径穿越。`ClientStartup` 首次 tick 调用并三路合并进 `state.json`/`pending.json`/`servers.json`。单测 10 项 |
+| V2-12 | 单元测试套件（`core`/`server`/`client`/`client.gui`/`helper` 纯 JVM） | ✅ | 持续维护；当前 **251 个测试方法**（250 通过 + 1 skip），31 个 XML，见 §G 同步场景覆盖表；界面布局由 `CheckLayoutTest` 5 项在数学层面保证不重叠 |
 
 ## B. gradle 任务表（避免反复重跑）
 
 | 任务 | 命令 | 产物 | 什么时候需要重跑 | 最近验证 | 耗时 |
 | --- | --- | --- | --- | --- | --- |
-| 编译 | `.\gradlew.bat compileJava --offline` | `build/classes/java/main` | 改 Java 源码后 | **2026-11-06 22:46 SUCCESS（40s）**；仅 3 条 `ModLoadingContext.get()` removal 警告 | ~40s |
-| 单元测试（全量） | `.\gradlew.bat test --offline` | `build/test-results/test` | 改 `core/`/`server/`/`client/`/测试后 | **2026-11-07 SUCCESS**：147 PASSED / 0 FAILED / 1 SKIPPED（`LiveSyncIT`，需 runServer 在跑）；共 **148** 个测试方法 / 23 个 XML（数字以 `build/test-results/test/*.xml` 求和为准，别看控制台摘要） | ~40s（本次 test 任务 UP-TO-DATE，build 全链 59s） |
+| 编译 | `.\gradlew.bat compileJava --offline` | `build/classes/java/main` | 改 Java 源码后 | **2026-11-08 17:51 SUCCESS（2m42s）**；仅 3 条 `ModLoadingContext.get()` removal 警告 | ~40s~2m42s（含 MixinGradle APT + downloadMcpConfig） |
+| 单元测试（全量） | `.\gradlew.bat test --offline` | `build/test-results/test` | 改 `core/`/`server/`/`client/`/`helper/`/测试后 | **2026-11-08 SUCCESS（5m31s）**：250 PASSED / 0 FAILED / 1 SKIPPED（`LiveSyncIT`，需 runServer 在跑）；共 **251** 个测试方法 / 31 个 XML（数字以 `build/test-results/test/*.xml` 求和为准，别看控制台摘要） | ~5m31s（含 compileJava 全量） |
 | 同步场景（新增） | `.\gradlew.bat test --offline --tests "com.ftysync.client.SyncScenarioTest"` | `build/test-results/test` | 改发布/比对/下载/清理任何环节后 | **2026-11-07 SUCCESS（41s）13/13 通过**；进程内真 `HttpSyncServer` + 临时游戏目录，不启动游戏 | ~41s |
-| 单元测试（仅客户端） | `.\gradlew.bat test --offline --tests "com.ftysync.client.*"` | `build/test-results/test` | 只改客户端代码时 | 本次未单跑；按 XML 分类求和为 **67 个方法**（含 `LiveSyncIT` 1 skip），其中 `CheckLayoutTest` 5 项可单独跑 `--tests "com.ftysync.client.gui.CheckLayoutTest"` | ~1m5s |
+| 单元测试（仅客户端） | `.\gradlew.bat test --offline --tests "com.ftysync.client.*"` | `build/test-results/test` | 只改客户端代码时 | 本次未单跑；按 XML 分类求和为 **121 个方法**（含 `LiveSyncIT` 1 skip）；`gui.CheckLayoutTest` 5 项、`helper.*` 36 项可分别单独跑 | ~1m5s~2m30s |
+| 单元测试（仅 helper） | `.\gradlew.bat test --offline --tests "com.ftysync.helper.*"` | `build/test-results/test` | 改 ApplyHelper / PendingApplier / MiniJson 后 | **2026-11-08 SUCCESS**：36 项全过（MiniJson 17 + PendingApplier 19） | ~2m |
+| 单元测试（回退与回收站） | `.\gradlew.bat test --offline --tests "com.ftysync.client.Rollback*" --tests "com.ftysync.client.TrashBrowserTest" --tests "com.ftysync.client.V1MigrationTest"` | `build/test-results/test` | 改 M5/M6 逻辑后 | **2026-11-08 SUCCESS**：RollbackPlanner 13 + RollbackService 9 + RollbackDetect 11 + TrashBrowser 13 + V1Migration 10 = 56 项全过 | ~2m30s |
 | 真实服务器集成（手工） | 先 `runServer`，再 `.\gradlew.bat test --offline --tests "com.ftysync.client.LiveSyncIT"` | 临时目录，无仓库污染 | 改下载/应用/备份/回收站/HTTP 后 | 2026-10-22 PASSED（真实下载 6 文件、清理多余 jar、备份旧文件、state/log、二次比对一致） | ~2m30s |
-| 打包 | `.\gradlew.bat build --offline` | `build/libs/FTYUpater-2.0.0.jar`（reobf） | 交付/发布/需要最终 jar 时 | **2026-11-07 10:56 SUCCESS（59s）**；`addMixinsToJar` + `jar` + `reobfJar` 均执行，`jarJar`/`reobfJarJar` SKIPPED；jar **147,746 字节**，已含 `CheckLayout.class` + `CheckLayout$Metrics.class` + 重写后的 `JoinCheckScreen` | ~59s（首次含 downloadMcpConfig 时 110s） |
+| 打包 | `.\gradlew.bat build --offline` | `build/libs/FTYUpater-2.0.0.jar`（reobf） | 交付/发布/需要最终 jar 时 | **2026-11-08 19:07 SUCCESS（1m58s）**；`addMixinsToJar` + `jar` + `reobfJar` 均执行，`jarJar`/`reobfJarJar` SKIPPED；jar **236,915 字节**，已含 M5/M6 全部新类（`helper/*`、`RollbackScreen`、`TrashScreen`、`TrashBrowser`、`RollbackPlanner/Service/Detect`、`V1Migration`、`PendingNotice`、`ClientStartup`） | ~2m（首次含 downloadMcpConfig 时更久） |
 | 客户端运行 | `.\gradlew.bat runClient --offline --args="--quickPlayMultiplayer <host:port>"` | 启动游戏（`run/`） | 改 mixin/UI/客户端网络/进服流程后 | **暂停使用**：用户 2026-11-07 明确要求不上真机测试；界面外观因此仍是「未验证」 | 3~4 分钟（起服约 2.5 分钟） |
 | 服务端运行 | `.\gradlew.bat runServer --offline` | 启动服务器（`run/`，需 EULA；v2 HTTP :8081） | 改服务端发布/HTTP/广告后 | **暂停使用**：同上；服务端行为改由进程内 `HttpSyncServer` 测试覆盖 | 2~3 分钟 |
 | 数据生成 | `.\gradlew.bat runData` | `src/generated/resources` | 改数据生成时（当前项目未用） | 未跑 | 待测 |
 
 **基线事实（2026-11-07，`build --offline`）**：
 
-- 结果：BUILD SUCCESSFUL，59 秒（10:56）；
+- 结果：BUILD SUCCESSFUL，1 分 58 秒（19:07）；
 - 执行任务：`addMixinsToJar`、`jar`、`configureReobfTaskForReobfJar`、`reobfJar`、`assemble`、`build`；UP-TO-DATE：`compileJava`、`processResources`、`classes`、`test`、`check`；SKIPPED：`jarJar`、`reobfJarJar`；
 - 注意：`build` 会触发 `downloadMcpConfig`，是耗时大头之一。**日常改代码不要跑 `build`**，用 `compileJava` / `test`。
 
@@ -69,9 +72,9 @@ v1 的 11 项功能（`/manifest` 平铺清单、`SyncManager` 文件名启发�
 
 | 产物 | 路径 | 生成方式 | 状态 | 生成时间 |
 | --- | --- | --- | --- | --- |
-| v2 发布 jar | `build/libs/FTYUpater-2.0.0.jar`（147,746 字节） | `build`（reobfJar） | ✅ **当前交付产物**（含 `ftyupater.mixins.json`、`ftyupater.refmap.json`、`CheckLayout.class`、`CheckLayout$Metrics.class`、重写后的 `JoinCheckScreen`） | 2026-11-07 10:56 |
+| v2 发布 jar | `build/libs/FTYUpater-2.0.0.jar`（236,915 字节） | `build`（reobfJar） | ✅ **当前交付产物**（含 `ftyupater.mixins.json`、`ftyupater.refmap.json`、`CheckLayout`、`JoinCheckScreen`、`helper/*`、`RollbackScreen`、`TrashScreen`） | 2026-11-08 19:07 |
 | v1 旧 jar | `.trash-v1-20261106/FTYUpater-1.0.0.jar` | 旧 `build` | 🗑️ 已移出 `build/libs/`（可恢复） | 2026-09-13 |
-| 开发 classes | `build/classes/java/main` | `compileJava` | ✅ | 2026-11-07 08:35 |
+| 开发 classes | `build/classes/java/main` | `compileJava` | ✅ | 2026-11-08 17:51 |
 | Mixin refmap | `build/resources/main/ftyupater.refmap.json` | 注解处理器 | ✅（v2） | 随 build 生成 |
 
 ## D. 环境事实
@@ -87,7 +90,7 @@ v1 的 11 项功能（`/manifest` 平铺清单、`SyncManager` 文件名启发�
 | dev mixin | MixinGradle 0.7.38 + `mixin { add sourceSets.main, "ftyupater.refmap.json" }` + runs `--mixin.config=ftyupater.mixins.json` + mixins.json `refmap`；dev 没有 manifest MixinConfigs 也能加载（ADR-016） |
 | 桌面会话 | 2026-11-07 实测已解锁（`SessionId=1`、`UserInteractive=True`，截图可用）；但用户明确要求**不上真机测试**，所以不再用它做 GUI 验收 |
 | 文本编辑 | ⚠️ 禁止用 PowerShell `Set-Content`/`Get-Content` 回写源码/文档（会加 BOM 导致 javac 失败，或按 ANSI 破坏中文，ADR-013）；一律用编辑工具/python（UTF-8 无 BOM） |
-| 工作目录 | `C:\CodeSpace\Java\FTYUpater`（非 git 仓库） |
+| 工作目录 | `C:\CodeSpace\Java\FTYUpater`（git 仓库，远程 <https://github.com/fy-1123/FTYUpater>，分支 `main`） |
 
 ## E. 维护规则
 
@@ -111,6 +114,8 @@ v1 的 11 项功能（`/manifest` 平铺清单、`SyncManager` 文件名启发�
 | v1 链路删除 + 界面重写 | 2026-11-06 | ✅ 逻辑 / ⚠️ 外观 | 19 个 v1 类移入 `.trash-v1-20261106/`；`JoinCheckScreen` 改原版控件 + 自适应布局；`compileJava`/`test`/`build` 全绿；界面外观未在真机确认（用户要求不上真机） |
 | 同步场景端到端测试 | 2026-11-07 | ✅ | 新增 `SyncScenarioTest` 13 项；全量 `test` **148 个方法 / 147 通过 / 1 skip**（23 个 XML） |
 | 界面布局抽成 CheckLayout | 2026-11-07 | ✅ 逻辑 / ⚠️ 点击流程 | 纵向坐标全部移入 `client/gui/CheckLayout.java`（纯整数、零 MC 依赖）；新增 `CheckLayoutTest` 5 项，160~3840 宽 × 40~2160 高逐尺寸断言文字/列表/按钮三者不重叠；`build` 重新打包 147,746 字节，jar 内已含 `CheckLayout.class`（旧 jar 是 22:46 的陈旧产物，已覆盖）；**进服→一键同步→重启→进服 点击流程仍未验证**（用户要求不上真机） |
+| M5 版本管理与回退 + ApplyHelper | 2026-11-08 | ✅ 逻辑 / ⚠️ 点击流程 | 新增 10 个类：`helper/{ApplyHelper,PendingApplier,HelperResult,MiniJson}`、`client/{HelperLauncher,PendingNotice,ClientStartup,RollbackPlanner,RollbackService,RollbackDetect,ServerGeneration}`、`gui/RollbackScreen`；改 `LocalState`（`previousGeneration` + `advanceGeneration`）、`SyncEngine`、`PackClient`（带 generation 重载 + `fetchGenerations`）、`FTYUpater`（DistExecutor 挂客户端启动检查）、`JoinCheckScreen`（回退检测 + 【版本回退】入口）。新增单测 **63 项**（MiniJson 17 / PendingApplier 19 / PendingNotice 11 / RollbackPlanner 13 / RollbackService 9 / RollbackDetect 11 —— 注：前两类的 36 项在 helper 包）。**所有点击流程未在真机验证** |
+| M6 打磨与交付 | 2026-11-08 | ✅ 逻辑 / ⚠️ 点击流程 | `TrashBrowser`（回收站读取/非破坏性还原/清空目录）+ `gui/TrashScreen`（界面，入口在回退界面）+ `V1Migration`（v1 三件文本配置迁移，改名留证）+ `ClientStartup.migrateFromV1` 接线；新增 `docs/testing.md`（14 节 E2E 手工清单，全部未执行并如实标注）；单测 **23 项**（TrashBrowser 13 / V1Migration 10）。全量 `test` **251 个方法 / 250 通过 / 1 skip / 31 个 XML**；`build` 236,915 字节 |
 
 ## G. 同步场景覆盖表（「什么情况下可用 / 不可用」）
 
@@ -132,14 +137,16 @@ v1 的 11 项功能（`/manifest` 平铺清单、`SyncManager` 文件名启发�
 | 12 | 连续同步两次 | 第二次完全无动作（幂等） | `secondSyncIsNoOp` | ✅ |
 | 13 | 服务器黑名单里的文件 | 清单里没有，客户端不会被要求下载 | `blacklistedFileIsNotPublished` | ✅ |
 
-**未覆盖 / 需要真机或 M5 才能验证的**（诚实标注，不要当已通过）：
+**未覆盖 / 需要真机才能验证的**（诚实标注，不要当已通过）：
 
 | 场景 | 为什么现在测不了 |
 | --- | --- |
 | 进服检查界面的实际观感、不重叠 | 需要启动游戏看画面；用户要求不上真机 → 只有布局代码层面的保证 |
 | 点「一键同步」按钮 → 进度 → 完成 | 同上，需要鼠标点击真界面 |
-| 正在被 JVM 锁住的 `mods/*.jar` 替换 | 纯 JVM 测试里文件不被锁，永远走「立即应用」分支；锁 → pending 的分支由 `ApplyServiceTest.lockedReplaceGoesToPending` 用桩覆盖，真锁行为要 M5 的 ApplyHelper |
-| `pending/pending.json` 在退出后自动应用 | M5 才有 ApplyHelper |
+| 正在被 JVM 锁住的 `mods/*.jar` 替换 | 纯 JVM 测试里文件不被锁，永远走「立即应用」分支；锁 → pending 的分支由 `ApplyServiceTest.lockedReplaceGoesToPending` 用桩覆盖；真锁 + helper 补上的完整链路见 `docs/testing.md` 第 7 项 |
+| `pending/pending.json` 在退出后自动应用 | 逻辑已由 `PendingApplierTest` 19 项覆盖（含 `runWritesResultAndClearsPending`、`lockedTargetStaysPending`）；**真进程等待与真锁未验证**，见 `docs/testing.md` 第 7/8 项 |
 | 服务器广告经真实 Forge status ping 传回客户端 | 需要真服务器 + 真客户端；协议层由 `AdvertParserTest` / `JoinDecisionTest` 覆盖 |
-| 版本回退（回到上一代） | M5 |
+| 版本回退的完整点击流程 | 逻辑已由 `RollbackPlannerTest` 13 / `RollbackServiceTest` 9 / `RollbackDetectTest` 11 覆盖；界面点击见 `docs/testing.md` 第 10 项 |
+| 回收站还原的完整点击流程 | 逻辑已由 `TrashBrowserTest` 13 项覆盖；界面点击见 `docs/testing.md` 第 6 项 |
+| v1 迁移在真机首次启动的行为 | 逻辑已由 `V1MigrationTest` 10 项覆盖；真机见 `docs/testing.md` 第 12 项 |
 

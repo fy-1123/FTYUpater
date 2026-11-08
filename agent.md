@@ -44,11 +44,13 @@ FTYUpater 是一个 **Minecraft Forge 1.20.1** 的服务器模组包同步模组
 
 | 目的 | 命令 | 说明 |
 | --- | --- | --- |
-| 逻辑正确性 | `.\gradlew.bat test` | 纯 JVM 单元测试，不启动游戏（**当前 148 个方法 / 147 过 / 1 skip**） |
+| 逻辑正确性 | `.\gradlew.bat test` | 纯 JVM 单元测试，不启动游戏（**当前 251 个方法 / 250 过 / 1 skip**） |
 | 同步场景 | `.\gradlew.bat test --tests "com.ftysync.client.SyncScenarioTest"` | 13 项端到端（进程内 HttpSyncServer），见 `docs/status-matrix.md` §G |
-| 编译检查 | `.\gradlew.bat compileJava --offline` | 改完先编译（约 40 秒） |
-| 打包 / 交付 | `.\gradlew.bat build --offline` | 基线 59 秒（2026-11-07，增量） |
-| 游戏内验证 | `.\gradlew.bat runClient` / `runServer` | 很重，只在里程碑验收或改 mixin/网络时跑 |
+| 回退 / 回收站 / 迁移 | `.\gradlew.bat test --tests "com.ftysync.client.Rollback*" --tests "com.ftysync.client.TrashBrowserTest" --tests "com.ftysync.client.V1MigrationTest"` | 56 项（Planner 13 / Service 9 / Detect 11 / Trash 13 / V1 10） |
+| ApplyHelper | `.\gradlew.bat test --tests "com.ftysync.helper.*"` | 36 项（MiniJson 17 / PendingApplier 19） |
+| 编译检查 | `.\gradlew.bat compileJava --offline` | 改完先编译（40 秒~2 分 40 秒） |
+| 打包 / 交付 | `.\gradlew.bat build --offline` | 基线 2 分钟（2026-11-08，增量） |
+| 游戏内验证 | `.\gradlew.bat runClient` / `runServer` | 很重，只在里程碑验收或改 mixin/网络时跑；**当前按用户要求暂停** |
 
 **所有 gradle 调用走 `mc_gradle` 工具**（ADR-021）：bash 跑 `.bat` 会挂起，pwsh 直跑会把输出缓冲到进程结束、看不到进度。
 **用户明确要求不上真机测试**（2026-11-07）：不再用 `runClient`/`runServer` 做 GUI 验收，同步场景一律用纯 JVM 测试覆盖（进程内 `HttpSyncServer` + `TestSyncServer`）。
@@ -69,6 +71,7 @@ FTYUpater 是一个 **Minecraft Forge 1.20.1** 的服务器模组包同步模组
 | `docs/status-matrix.md` | 功能状态表 + gradle 任务表 + 构建产物状态 |
 | `docs/decisions.md` | 决策记录（ADR-001 起） |
 | `docs/dev-workflow.md` | 日常开发流程、文档更新清单、禁止事项 |
+| `docs/testing.md` | E2E 手工验收清单（14 节，需开游戏；全部未执行） |
 | `docs/qa-log.md` | 用户原始需求与两轮问答记录 |
 
 ## 6. 重要约定

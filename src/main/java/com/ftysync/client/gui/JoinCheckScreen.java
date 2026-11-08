@@ -9,6 +9,7 @@ import com.ftysync.client.LocalScanner;
 import com.ftysync.client.PackClient;
 import com.ftysync.client.PendingOp;
 import com.ftysync.client.PendingQueue;
+import com.ftysync.client.RollbackDetect;
 import com.ftysync.client.ServerSourceCache;
 import com.ftysync.client.SyncEngine;
 import com.ftysync.client.SyncPaths;
@@ -87,6 +88,7 @@ public final class JoinCheckScreen extends Screen {
     private LocalScanner.ScanResult scan;
     private Set<String> protectedSet = Set.of();
     private JoinDecision.Decision decision;
+    private RollbackDetect.Result rollback = new RollbackDetect.Result(RollbackDetect.Kind.UNKNOWN, null, null);
     private String statusLine = "正在检查服务器模组…";
     private String reportLine = "";
     private boolean reportOk = true;
@@ -174,6 +176,11 @@ public final class JoinCheckScreen extends Screen {
             if (decision.reasonKey().equals("fetch_failed") || decision.reasonKey().equals("no_source")) {
                 becomeNotice(decision.reasonKey().equals("no_source") ? "服务器没有公布同步地址" : "拉取服务器模组失败");
                 return;
+            }
+            // M5-5：服务器管理员把内容回滚了，要明说——否则玩家会以为是「没变化」
+            this.rollback = RollbackDetect.compare(state, manifest);
+            if (rollback.serverRolledBack()) {
+                this.statusLine = rollback.describe();
             }
             this.phase = Phase.READY;
             rebuildWidgets();
@@ -276,6 +283,11 @@ public final class JoinCheckScreen extends Screen {
 
     private void closeToParent() {
         minecraft.setScreen(parent == null ? new TitleScreen() : parent);
+    }
+
+    /** 打开版本回退界面（M5-4）：返回时回到本界面，不丢当前检查状态。 */
+    private void openRollback() {
+        minecraft.setScreen(new RollbackScreen(this, sourceUrl));
     }
 
     @Override
@@ -425,6 +437,9 @@ public final class JoinCheckScreen extends Screen {
             actions.add(new Action(label, this::startSync));
         }
         actions.add(new Action(notice ? "仍然进服" : "进入服务器", this::continueToServer));
+        if (!notice) {
+            actions.add(new Action("版本回退", this::openRollback));
+        }
         actions.add(new Action("取消", this::closeToParent));
         addButtonRow(y, actions);
     }
